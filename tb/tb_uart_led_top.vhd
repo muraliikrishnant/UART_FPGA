@@ -39,10 +39,14 @@ architecture sim of tb_uart_led_top is
         wait for BIT_PERIOD;
     end procedure;
 
-    -- Measure PWM duty cycle (%) over one 256-clock PWM period
+    -- Measure PWM duty cycle (%) of one channel over a 256-clock PWM period.
+    -- Takes the whole led_pwm vector plus an index (rather than an indexed
+    -- signal) because GHDL requires a static signal name for a signal-class
+    -- actual, and indexing by a loop variable is not static.
     procedure measure_duty(
-        signal   pwm_sig     : in  std_logic;
-        signal   clk_sig     : in  std_logic;
+        signal   pwm_vec      : in  std_logic_vector;
+        constant index        : in  integer;
+        signal   clk_sig      : in  std_logic;
         variable duty_percent : out integer
     ) is
         variable high_count : integer := 0;
@@ -51,7 +55,7 @@ architecture sim of tb_uart_led_top is
         high_count := 0;
         for i in 0 to SAMPLE_CYCLES - 1 loop
             wait until rising_edge(clk_sig);
-            if pwm_sig = '1' then
+            if pwm_vec(index) = '1' then
                 high_count := high_count + 1;
             end if;
         end loop;
@@ -106,7 +110,7 @@ begin
         wait for 3 * CLK_PERIOD;
 
         for i in 0 to NUM_LEDS - 1 loop
-            measure_duty(led_pwm(i), clk, duty);
+            measure_duty(led_pwm, i, clk, duty);
             check("TEST 1 (LED" & integer'image(i) & " off after reset)", duty, 0, 0,
                   test_pass_count, test_fail_count);
         end loop;
@@ -117,7 +121,7 @@ begin
         uart_send(rx, x"35"); -- '5'
         wait for 2 * CLK_PERIOD;
 
-        measure_duty(led_pwm(0), clk, duty);
+        measure_duty(led_pwm, 0, clk, duty);
         check("TEST 2 (LED0 mid brightness from '5', no channel select needed)",
               duty, 45, 65, test_pass_count, test_fail_count);
 
@@ -129,11 +133,11 @@ begin
         uart_send(rx, x"39"); -- '9'
         wait for 2 * CLK_PERIOD;
 
-        measure_duty(led_pwm(1), clk, duty);
+        measure_duty(led_pwm, 1, clk, duty);
         check("TEST 3 (LED1 full brightness from 'B'+'9')", duty, 95, 100,
               test_pass_count, test_fail_count);
 
-        measure_duty(led_pwm(0), clk, duty);
+        measure_duty(led_pwm, 0, clk, duty);
         check("TEST 3 (LED0 unaffected by channel switch)", duty, 45, 65,
               test_pass_count, test_fail_count);
 
@@ -145,7 +149,7 @@ begin
         uart_send(rx, x"30"); -- '0'
         wait for 2 * CLK_PERIOD;
 
-        measure_duty(led_pwm(2), clk, duty);
+        measure_duty(led_pwm, 2, clk, duty);
         check("TEST 4 (LED2 off from 'C'+'0')", duty, 0, 0,
               test_pass_count, test_fail_count);
 
@@ -155,7 +159,7 @@ begin
         uart_send(rx, x"5A"); -- 'Z'
         wait for 2 * CLK_PERIOD;
 
-        measure_duty(led_pwm(1), clk, duty);
+        measure_duty(led_pwm, 1, clk, duty);
         check("TEST 5 (LED1 unchanged after unsupported 'Z')", duty, 95, 100,
               test_pass_count, test_fail_count);
 
@@ -168,7 +172,7 @@ begin
         wait for 3 * CLK_PERIOD;
 
         for i in 0 to NUM_LEDS - 1 loop
-            measure_duty(led_pwm(i), clk, duty);
+            measure_duty(led_pwm, i, clk, duty);
             check("TEST 6 (LED" & integer'image(i) & " off after mid-op reset)", duty, 0, 0,
                   test_pass_count, test_fail_count);
         end loop;
@@ -181,7 +185,7 @@ begin
         uart_send(rx, x"33"); -- '3'
         wait for 2 * CLK_PERIOD;
 
-        measure_duty(led_pwm(3), clk, duty);
+        measure_duty(led_pwm, 3, clk, duty);
         check("TEST 7 (LED3 low-mid brightness from 'D'+'3' after reset)",
               duty, 25, 40, test_pass_count, test_fail_count);
 
