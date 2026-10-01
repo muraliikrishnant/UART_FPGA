@@ -92,6 +92,16 @@ ghdl -r tb_uart_led_top --wave=uart_led.ghw
 # Open uart_led.ghw in GTKWave to view waveforms
 ```
 
+## Simulation Results (EDA Playground + GHDL)
+
+All 14 checks across 7 tests pass:
+
+![Simulation log showing ALL TESTS PASSED](docs/images/simulation_log.png)
+
+EPWave waveform viewer after the run:
+
+![EPWave window](docs/images/epwave_window.png)
+
 ## Tests Covered
 
 1. **Reset** — all 4 LEDs off
